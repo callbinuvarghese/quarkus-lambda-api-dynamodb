@@ -1,0 +1,516 @@
+➜  aws git clone https://github.com/aws-samples/aws-quarkus-demo.git
+Cloning into 'aws-quarkus-demo'...
+remote: Enumerating objects: 157, done.
+remote: Counting objects: 100% (157/157), done.
+remote: Compressing objects: 100% (87/87), done.
+remote: Total 581 (delta 90), reused 116 (delta 62), pack-reused 424
+Receiving objects: 100% (581/581), 379.95 KiB | 5.28 MiB/s, done.
+Resolving deltas: 100% (265/265), done.
+➜  aws ls
+aws-quarkus-demo
+aws-sam-swagger-apigateway-lambda-starter
+aws-sam-swagger-apigateway-lambda-starter-old
+aws-serverless-workshops-master
+bd-test1
+lambda-apigateway-role-1.json
+lambda-apigateway-role.json
+macaws-codecommit-pwdel
+wildrydes-site
+
+➜  aws-quarkus-demo git:(master) ls
+CODE_OF_CONDUCT.md LICENSE            fargate
+CONTRIBUTING.md    README.md          lambda
+➜  aws-quarkus-demo git:(master) cd lambda
+➜  lambda git:(master) ls
+README.md       pom.xml         sam.jvm.yaml    sam.native.yaml src
+➜  lambda git:(master) cat sam.jvm.yaml
+  AWSTemplateFormatVersion: '2010-09-09'
+  Transform: AWS::Serverless-2016-10-31
+  Description: AWS Serverless Quarkus HTTP - com.amazon::LambdaQuarkus
+
+  Resources:
+    ApiGatewayApi:
+      Type: AWS::Serverless::Api
+      Properties:
+        Name: Api Gateway for Quarkus demo
+        StageName: prod
+
+    LambdaQuarkusFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        Handler: io.quarkus.amazon.lambda.runtime.QuarkusStreamHandler::handleRequest
+        Runtime: java11
+        CodeUri: target/LambdaQuarkus-1.0-SNAPSHOT-runner.jar
+        MemorySize: 256
+        Timeout: 15
+        Policies:
+          - DynamoDBCrudPolicy:
+              TableName: Users
+        Events:
+          LambdaQuarkusGetAll:
+            Type: Api
+            Properties:
+              RestApiId: !Ref ApiGatewayApi
+              Path: /users
+              Method: GET
+          LambdaQuarkusGetUser:
+            Type: Api
+            Properties:
+              RestApiId: !Ref ApiGatewayApi
+              Path: /users/{userId}
+              Method: GET
+          LambdaQuarkusDeleteUser:
+            Type: Api
+            Properties:
+              RestApiId: !Ref ApiGatewayApi
+              Path: /users/{userId}
+              Method: DELETE
+          LambdaQuarkusAddUser:
+            Type: Api
+            Properties:
+              RestApiId: !Ref ApiGatewayApi
+              Path: /users
+              Method: POST
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: Users
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+
+  Outputs:
+    ApiUrl:
+      Description: URL of the users listing in the prod stage
+      Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/prod/users"%
+➜  lambda git:(master) idea .
+
+
+➜  lambda git:(master) ✗ sam deploy --template-file sam.jvm.yaml \
+    --stack-name APIGatewayQuarkusDemo --capabilities CAPABILITY_IAM --guided
+
+Configuring SAM deploy
+======================
+
+	Looking for config file [samconfig.toml] :  Not found
+
+	Setting default arguments for 'sam deploy'
+	=========================================
+	Stack Name [APIGatewayQuarkusDemo]:
+	AWS Region [us-east-1]:
+	#Shows you resources changes to be deployed and require a 'Y' to initiate deploy
+	Confirm changes before deploy [y/N]: y
+	#SAM needs permission to be able to create roles to connect to the resources in your template
+	Allow SAM CLI IAM role creation [Y/n]: Y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: n
+Error: Security Constraints Not Satisfied!
+➜  lambda git:(master) ✗ sam deploy --template-file sam.jvm.yaml \
+    --stack-name APIGatewayQuarkusDemo --capabilities CAPABILITY_IAM --guided
+
+Configuring SAM deploy
+======================
+
+	Looking for config file [samconfig.toml] :  Not found
+
+	Setting default arguments for 'sam deploy'
+	=========================================
+	Stack Name [APIGatewayQuarkusDemo]:
+	AWS Region [us-east-1]:
+	#Shows you resources changes to be deployed and require a 'Y' to initiate deploy
+	Confirm changes before deploy [y/N]: y
+	#SAM needs permission to be able to create roles to connect to the resources in your template
+	Allow SAM CLI IAM role creation [Y/n]: y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: Y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: y
+	Save arguments to configuration file [Y/n]: Y
+	SAM configuration file [samconfig.toml]:
+	SAM configuration environment [default]:
+
+	Looking for resources needed for deployment: Not found.
+	Creating the required resources...
+	Successfully created!
+
+		Managed S3 bucket: aws-sam-cli-managed-default-samclisourcebucket-p792n280trsk
+		A different default S3 bucket can be set in samconfig.toml
+
+	Saved arguments to config file
+	Running 'sam deploy' for future deployments will use the parameters saved above.
+	The above parameters can be changed by modifying samconfig.toml
+	Learn more about samconfig.toml syntax at
+	https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+Error: Unable to upload artifact target/LambdaQuarkus-1.0-SNAPSHOT-runner.jar referenced by CodeUri parameter of LambdaQuarkusFunction resource.
+Parameter CodeUri of resource LambdaQuarkusFunction refers to a file or folder that does not exist /Users/binu.b.varghese/source/aws/aws-quarkus-demo/lambda/target/LambdaQuarkus-1.0-SNAPSHOT-runner.jar
+
+
+➜  lambda git:(master) ✗ mvn clean package
+[INFO] Scanning for projects...
+[INFO]
+[INFO] ----------------------< com.amazon:LambdaQuarkus >----------------------
+[INFO] Building LambdaQuarkus 1.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- maven-clean-plugin:2.5:clean (default-clean) @ LambdaQuarkus ---
+[INFO] Deleting /Users/binu.b.varghese/source/aws/aws-quarkus-demo/lambda/target
+[INFO]
+[INFO] --- maven-resources-plugin:2.6:resources (default-resources) @ LambdaQuarkus ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 1 resource
+[INFO]
+[INFO] --- maven-compiler-plugin:3.8.1:compile (default-compile) @ LambdaQuarkus ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 4 source files to /Users/binu.b.varghese/source/aws/aws-quarkus-demo/lambda/target/classes
+[INFO]
+[INFO] --- maven-resources-plugin:2.6:testResources (default-testResources) @ LambdaQuarkus ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory /Users/binu.b.varghese/source/aws/aws-quarkus-demo/lambda/src/test/resources
+[INFO]
+[INFO] --- maven-compiler-plugin:3.8.1:testCompile (default-testCompile) @ LambdaQuarkus ---
+[INFO] No sources to compile
+[INFO]
+[INFO] --- maven-surefire-plugin:3.0.0-M5:test (default-test) @ LambdaQuarkus ---
+[INFO] No tests to run.
+[INFO]
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ LambdaQuarkus ---
+[INFO] Building jar: /Users/binu.b.varghese/source/aws/aws-quarkus-demo/lambda/target/LambdaQuarkus-1.0-SNAPSHOT.jar
+[INFO]
+[INFO] --- quarkus-maven-plugin:1.9.2.Final:build (default) @ LambdaQuarkus ---
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-deployment/1.9.2.Final/quarkus-amazon-lambda-deployment-1.9.2.Final.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-deployment/1.9.2.Final/quarkus-amazon-lambda-deployment-1.9.2.Final.pom (1.9 kB at 6.6 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-common-deployment/1.9.2.Final/quarkus-amazon-lambda-common-deployment-1.9.2.Final.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-common-deployment/1.9.2.Final/quarkus-amazon-lambda-common-deployment-1.9.2.Final.pom (2.2 kB at 57 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-dynamodb-deployment/1.9.2.Final/quarkus-amazon-dynamodb-deployment-1.9.2.Final.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-dynamodb-deployment/1.9.2.Final/quarkus-amazon-dynamodb-deployment-1.9.2.Final.pom (2.9 kB at 64 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-common-deployment/1.9.2.Final/quarkus-amazon-common-deployment-1.9.2.Final.pom
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-common-deployment/1.9.2.Final/quarkus-amazon-common-deployment-1.9.2.Final.pom (2.4 kB at 53 kB/s)
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-common-deployment/1.9.2.Final/quarkus-amazon-lambda-common-deployment-1.9.2.Final.jar
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-deployment/1.9.2.Final/quarkus-amazon-lambda-deployment-1.9.2.Final.jar
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-dynamodb-deployment/1.9.2.Final/quarkus-amazon-dynamodb-deployment-1.9.2.Final.jar
+Downloading from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-common-deployment/1.9.2.Final/quarkus-amazon-common-deployment-1.9.2.Final.jar
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-common-deployment/1.9.2.Final/quarkus-amazon-lambda-common-deployment-1.9.2.Final.jar (16 kB at 392 kB/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-common-deployment/1.9.2.Final/quarkus-amazon-common-deployment-1.9.2.Final.jar (17 kB at 140 kB/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-dynamodb-deployment/1.9.2.Final/quarkus-amazon-dynamodb-deployment-1.9.2.Final.jar (7.0 kB at 59 kB/s)
+Downloaded from central: https://repo.maven.apache.org/maven2/io/quarkus/quarkus-amazon-lambda-deployment/1.9.2.Final/quarkus-amazon-lambda-deployment-1.9.2.Final.jar (11 kB at 90 kB/s)
+[WARNING] [io.quarkus.deployment.QuarkusAugmentor] Using Java versions older than 11 to build Quarkus applications is deprecated and will be disallowed in a future release!
+[INFO] [org.jboss.threads] JBoss Threads version 3.1.1.Final
+[INFO] [io.quarkus.deployment.pkg.steps.JarResultBuildStep] Building fat jar: /Users/binu.b.varghese/source/aws/aws-quarkus-demo/lambda/target/LambdaQuarkus-1.0-SNAPSHOT-runner.jar
+[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 4546ms
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  15.432 s
+[INFO] Finished at: 2020-11-24T22:17:08-05:00
+[INFO] ------------------------------------------------------------------------
+➜  lambda git:(master) ✗ ls target
+LambdaQuarkus-1.0-SNAPSHOT-runner.jar   manage.sh
+LambdaQuarkus-1.0-SNAPSHOT.jar.original maven-archiver
+bootstrap-example.sh                    maven-status
+classes                                 sam.jvm.yaml
+function.zip                            sam.native.yaml
+generated-sources
+
+
+➜  lambda git:(master) ✗ sam deploy --template-file sam.jvm.yaml \
+    --stack-name APIGatewayQuarkusDemo --capabilities CAPABILITY_IAM --guided
+
+Configuring SAM deploy
+======================
+
+	Looking for config file [samconfig.toml] :  Found
+	Reading default arguments  :  Success
+
+	Setting default arguments for 'sam deploy'
+	=========================================
+	Stack Name [APIGatewayQuarkusDemo]:
+	AWS Region [us-east-1]:
+	#Shows you resources changes to be deployed and require a 'Y' to initiate deploy
+	Confirm changes before deploy [Y/n]: Y
+	#SAM needs permission to be able to create roles to connect to the resources in your template
+	Allow SAM CLI IAM role creation [Y/n]: Y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: y
+	LambdaQuarkusFunction may not have authorization defined, Is this okay? [y/N]: y
+	Save arguments to configuration file [Y/n]: Y
+	SAM configuration file [samconfig.toml]:
+	SAM configuration environment [default]:
+
+	Looking for resources needed for deployment: Found!
+
+		Managed S3 bucket: aws-sam-cli-managed-default-samclisourcebucket-p792n280trsk
+		A different default S3 bucket can be set in samconfig.toml
+
+	Saved arguments to config file
+	Running 'sam deploy' for future deployments will use the parameters saved above.
+	The above parameters can be changed by modifying samconfig.toml
+	Learn more about samconfig.toml syntax at
+	https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-config.html
+Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  262144 / 14Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  524288 / 14Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  786432 / 14Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  1048576 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  1310720 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  1572864 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  1835008 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  2097152 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  2359296 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  2621440 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  2883584 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  3145728 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  3407872 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  3670016 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  3932160 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  4194304 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  4456448 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  4718592 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  4980736 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  5242880 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  5505024 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  5767168 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  6029312 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  6291456 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  6553600 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  6815744 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  7077888 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  7340032 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  7602176 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  7864320 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  8126464 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  8388608 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  8650752 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  8912896 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  9175040 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  9437184 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  9699328 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  9961472 / 1Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  10223616 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  10485760 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  10747904 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  11010048 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  11272192 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  11534336 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  11796480 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  12058624 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  12266595 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  12528739 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  12790883 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  13053027 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  13315171 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  13577315 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  13839459 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  14101603 / Uploading to APIGatewayQuarkusDemo/8b6ad1740961ce7276cea1a178648aae  14363747 / 14363747.0  (100.00%)
+
+	Deploying with following values
+	===============================
+	Stack name                 : APIGatewayQuarkusDemo
+	Region                     : us-east-1
+	Confirm changeset          : True
+	Deployment s3 bucket       : aws-sam-cli-managed-default-samclisourcebucket-p792n280trsk
+	Capabilities               : ["CAPABILITY_IAM"]
+	Parameter overrides        : {}
+	Signing Profiles           : {}
+
+Initiating deployment
+=====================
+LambdaQuarkusFunction may not have authorization defined.
+LambdaQuarkusFunction may not have authorization defined.
+LambdaQuarkusFunction may not have authorization defined.
+LambdaQuarkusFunction may not have authorization defined.
+Uploading to APIGatewayQuarkusDemo/4d5aa74d3bbe27e145a3095924bd1fce.template  1912 / 1912.0  (100.00%)
+
+Waiting for changeset to be created..
+
+CloudFormation stack changeset
+-------------------------------------------------------------------------------------------------
+Operation                LogicalResourceId        ResourceType             Replacement
+-------------------------------------------------------------------------------------------------
++ Add                    ApiGatewayApiDeploymen   AWS::ApiGateway::Deplo   N/A
+                         t0c5c3cdcef              yment
++ Add                    ApiGatewayApiprodStage   AWS::ApiGateway::Stage   N/A
++ Add                    ApiGatewayApi            AWS::ApiGateway::RestA   N/A
+                                                  pi
++ Add                    LambdaQuarkusFunctionL   AWS::Lambda::Permissio   N/A
+                         ambdaQuarkusAddUserPer   n
+                         missionprod
++ Add                    LambdaQuarkusFunctionL   AWS::Lambda::Permissio   N/A
+                         ambdaQuarkusDeleteUser   n
+                         Permissionprod
++ Add                    LambdaQuarkusFunctionL   AWS::Lambda::Permissio   N/A
+                         ambdaQuarkusGetAllPerm   n
+                         issionprod
++ Add                    LambdaQuarkusFunctionL   AWS::Lambda::Permissio   N/A
+                         ambdaQuarkusGetUserPer   n
+                         missionprod
++ Add                    LambdaQuarkusFunctionR   AWS::IAM::Role           N/A
+                         ole
++ Add                    LambdaQuarkusFunction    AWS::Lambda::Function    N/A
++ Add                    UsersTable               AWS::DynamoDB::Table     N/A
+-------------------------------------------------------------------------------------------------
+
+Changeset created successfully. arn:aws:cloudformation:us-east-1:454728591671:changeSet/samcli-deploy1606274279/c637dad5-f7e0-4f94-893f-fde10560c811
+
+
+Previewing CloudFormation changeset before deployment
+======================================================
+Deploy this changeset? [y/N]: y
+
+2020-11-24 22:18:14 - Waiting for stack create/update to complete
+
+CloudFormation events from changeset
+-------------------------------------------------------------------------------------------------
+ResourceStatus           ResourceType             LogicalResourceId        ResourceStatusReason
+-------------------------------------------------------------------------------------------------
+CREATE_IN_PROGRESS       AWS::DynamoDB::Table     UsersTable               -
+CREATE_IN_PROGRESS       AWS::DynamoDB::Table     UsersTable               Resource creation
+                                                                           Initiated
+CREATE_IN_PROGRESS       AWS::IAM::Role           LambdaQuarkusFunctionR   Resource creation
+                                                  ole                      Initiated
+CREATE_IN_PROGRESS       AWS::IAM::Role           LambdaQuarkusFunctionR   -
+                                                  ole
+CREATE_COMPLETE          AWS::IAM::Role           LambdaQuarkusFunctionR   -
+                                                  ole
+CREATE_IN_PROGRESS       AWS::Lambda::Function    LambdaQuarkusFunction    -
+CREATE_IN_PROGRESS       AWS::Lambda::Function    LambdaQuarkusFunction    Resource creation
+                                                                           Initiated
+CREATE_COMPLETE          AWS::Lambda::Function    LambdaQuarkusFunction    -
+CREATE_IN_PROGRESS       AWS::ApiGateway::RestA   ApiGatewayApi            -
+                         pi
+CREATE_IN_PROGRESS       AWS::ApiGateway::RestA   ApiGatewayApi            Resource creation
+                         pi                                                Initiated
+CREATE_COMPLETE          AWS::ApiGateway::RestA   ApiGatewayApi            -
+                         pi
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusAddUserPer
+                                                  missionprod
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   Resource creation
+                         n                        ambdaQuarkusGetUserPer   Initiated
+                                                  missionprod
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   Resource creation
+                         n                        ambdaQuarkusDeleteUser   Initiated
+                                                  Permissionprod
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusGetAllPerm
+                                                  issionprod
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusGetUserPer
+                                                  missionprod
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   Resource creation
+                         n                        ambdaQuarkusAddUserPer   Initiated
+                                                  missionprod
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusDeleteUser
+                                                  Permissionprod
+CREATE_IN_PROGRESS       AWS::ApiGateway::Deplo   ApiGatewayApiDeploymen   -
+                         yment                    t0c5c3cdcef
+CREATE_COMPLETE          AWS::ApiGateway::Deplo   ApiGatewayApiDeploymen   -
+                         yment                    t0c5c3cdcef
+CREATE_IN_PROGRESS       AWS::ApiGateway::Deplo   ApiGatewayApiDeploymen   Resource creation
+                         yment                    t0c5c3cdcef              Initiated
+CREATE_IN_PROGRESS       AWS::Lambda::Permissio   LambdaQuarkusFunctionL   Resource creation
+                         n                        ambdaQuarkusGetAllPerm   Initiated
+                                                  issionprod
+CREATE_IN_PROGRESS       AWS::ApiGateway::Stage   ApiGatewayApiprodStage   -
+CREATE_IN_PROGRESS       AWS::ApiGateway::Stage   ApiGatewayApiprodStage   Resource creation
+                                                                           Initiated
+CREATE_COMPLETE          AWS::ApiGateway::Stage   ApiGatewayApiprodStage   -
+CREATE_COMPLETE          AWS::DynamoDB::Table     UsersTable               -
+CREATE_COMPLETE          AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusAddUserPer
+                                                  missionprod
+CREATE_COMPLETE          AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusGetAllPerm
+                                                  issionprod
+CREATE_COMPLETE          AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusGetUserPer
+                                                  missionprod
+CREATE_COMPLETE          AWS::Lambda::Permissio   LambdaQuarkusFunctionL   -
+                         n                        ambdaQuarkusDeleteUser
+                                                  Permissionprod
+CREATE_COMPLETE          AWS::CloudFormation::S   APIGatewayQuarkusDemo    -
+                         tack
+-------------------------------------------------------------------------------------------------
+
+CloudFormation outputs from deployed stack
+-------------------------------------------------------------------------------------------------
+Outputs
+-------------------------------------------------------------------------------------------------
+Key                 ApiUrl
+Description         URL of the users listing in the prod stage
+Value               https://tcu4l5wnbf.execute-api.us-east-1.amazonaws.com/prod/users
+-------------------------------------------------------------------------------------------------
+
+Successfully created/updated stack - APIGatewayQuarkusDemo in us-east-1
+
+➜
+
+
+
+Test
+POST
+
+➜  lambda git:(master) ✗  curl -v -d '{"userName":"binuv", "firstName":"Binu", "lastName":"Varghese", "age":"21"}' -H "Content-Type: application/json" -X POST https://tcu4l5wnbf.execute-api.us-east-1.amazonaws.com/prod/users
+Note: Unnecessary use of -X or --request, POST is already inferred.
+*   Trying 13.32.213.49...
+* TCP_NODELAY set
+* Connected to tcu4l5wnbf.execute-api.us-east-1.amazonaws.com (13.32.213.49) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*   CAfile: /etc/ssl/cert.pem
+  CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: CN=*.execute-api.us-east-1.amazonaws.com
+*  start date: May  7 00:00:00 2020 GMT
+*  expire date: Jun  7 12:00:00 2021 GMT
+*  subjectAltName: host "tcu4l5wnbf.execute-api.us-east-1.amazonaws.com" matched cert's "*.execute-api.us-east-1.amazonaws.com"
+*  issuer: C=US; O=Amazon; OU=Server CA 1B; CN=Amazon
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multi-use
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7f8dc000d200)
+> POST /prod/users HTTP/2
+> Host: tcu4l5wnbf.execute-api.us-east-1.amazonaws.com
+> User-Agent: curl/7.64.1
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 75
+>
+* Connection state changed (MAX_CONCURRENT_STREAMS == 128)!
+* We are completely uploaded and fine
+< HTTP/2 200
+< content-type: application/json
+< content-length: 36
+< date: Wed, 25 Nov 2020 03:36:34 GMT
+< x-amzn-requestid: 300fb6b9-3ca6-4bdc-82f0-f6973389a464
+< x-amz-apigw-id: Wi2iKG-goAMF3zQ=
+< x-amzn-trace-id: Root=1-5fbdd140-0d2c8e1c270fa0f274bb7366;Sampled=0
+< x-cache: Miss from cloudfront
+< via: 1.1 2718c3e6ba221e8243fe4bd1a3fa5b4f.cloudfront.net (CloudFront)
+< x-amz-cf-pop: ATL56-C4
+< x-amz-cf-id: vTKPinWRE93GdEKdg3I9cbGVLxHiggKsLabGJytoKuRBeOzO3SMHfg==
+<
+* Connection #0 to host tcu4l5wnbf.execute-api.us-east-1.amazonaws.com left intact
+11dbfbee-8879-47a7-8682-a3375e37f0c1* Closing connection 0
+
+
+GET
+
+➜  lambda git:(master) ✗ curl -v https://tcu4l5wnbf.execute-api.us-east-1.amazonaws.com/prod/users
+*   Trying 13.32.213.49...
+* TCP_NODELAY set
+* Connected to tcu4l5wnbf.execute-api.us-east-1.amazonaws.com (13.32.213.49) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*   CAfile: /etc/ssl/cert.pem
+  CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS change cipher, Change cipher spec (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+* ALPN, server accepted to use h2
+* Server certificate:
+*  subject: CN=*.execute-api.us-east-1.amazonaws.com
+*  start date: May  7 00:00:00 2020 GMT
+*  expire date: Jun  7 12:00:00 2021 GMT
+*  subjectAltName: host "tcu4l5wnbf.execute-api.us-east-1.amazonaws.com" matched cert's "*.execute-api.us-east-1.amazonaws.com"
+*  issuer: C=US; O=Amazon; OU=Server CA 1B; CN=Amazon
+*  SSL certificate verify ok.
+* Using HTTP2, server supports multi-use
+* Connection state changed (HTTP/2 confirmed)
+* Copying HTTP/2 data in stream buffer to connection buffer after upgrade: len=0
+* Using Stream ID: 1 (easy handle 0x7fdfb200b400)
+> GET /prod/users HTTP/2
+> Host: tcu4l5wnbf.execute-api.us-east-1.amazonaws.com
+> User-Agent: curl/7.64.1
+> Accept: */*
+>
+* Connection state changed (MAX_CONCURRENT_STREAMS == 128)!
+< HTTP/2 200
+< content-type: application/json
+< content-length: 233
+< date: Wed, 25 Nov 2020 03:37:22 GMT
+< x-amzn-requestid: 7cc1472a-7845-438d-80e0-7bed4ecec864
+< x-amz-apigw-id: Wi2psEeloAMFhlw=
+< x-amzn-trace-id: Root=1-5fbdd171-045f1a131509253d4fc031e1;Sampled=0
+< x-cache: Miss from cloudfront
+< via: 1.1 0311e0b009120ac76c4a810bd0393910.cloudfront.net (CloudFront)
+< x-amz-cf-pop: ATL56-C4
+< x-amz-cf-id: v5Y9Ymy7mCMDhftuoRPClQqm_PRN06YqUS8UsFx1AnD0eS13Otoa5g==
+<
+* Connection #0 to host tcu4l5wnbf.execute-api.us-east-1.amazonaws.com left intact
+[{"userId":"11dbfbee-8879-47a7-8682-a3375e37f0c1","userName":"binuv","firstName":"Binu","lastName":"Varghese","age":21},{"userId":"fe572282-a5e1-45f9-83bc-94613e2aada2","userName":"jdoe","firstName":"John","lastName":"Doe","age":35}]* Closing connection 0
+➜  lambda git:(master) ✗
